@@ -28,7 +28,8 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     val vehicleState: StateFlow<VehicleState> = vehicleRepository.vehicleState
     val dialogMessages: StateFlow<List<DialogMessage>> = dialogRepository.message
-
+    private val _recognizedText = MutableStateFlow("")
+    val recognizedText: StateFlow<String> = _recognizedText.asStateFlow()
     private val _volume = MutableStateFlow(0)
     val volume: StateFlow<Int> = _volume.asStateFlow()
 
@@ -38,7 +39,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
     private val intentParser = IntentParser()
     private val commandExecutor = CommandExecutor(context, vehicleRepository)
 
-    private val voiceManager = VoiceAssistantManager()
+    private val voiceManager = VoiceAssistantManager(context)
 
     init {
         dialogRepository.addAssistantMessage("您好，我是您的车载语音助手，请问有什么可以帮您")
@@ -54,6 +55,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
             override fun onBegin() {
                 _recognitionState.value = RecognitionState.LISTENING
+                _recognizedText.value = ""
             }
 
             override fun onVolumeChanged(volume: Int) {
@@ -62,7 +64,12 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
             override fun onResult(text: String) {
                 _recognitionState.value = RecognitionState.RECOGNIZING
+                _recognizedText.value = text
                 processUserInput(text)
+            }
+
+            override fun onPartialResult(text: String) {
+                _recognizedText.value = text
             }
 
             override fun onEnd() {
@@ -112,7 +119,6 @@ class MainViewModel(private val context: Context) : ViewModel() {
             // 6. 更新最近结果（用于UI反馈动画)
             _lastResult.value = result
         }
-
     }
 
     private fun handleTestCommand(text: String): CommandResult {
@@ -137,6 +143,8 @@ class MainViewModel(private val context: Context) : ViewModel() {
     fun startListening() {
         _recognitionState.value = RecognitionState.LISTENING
         voiceManager.startListening()
+
+        _recognizedText.value = ""
     }
 
     fun stopListening() {
@@ -145,6 +153,8 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     fun cancelListening() {
         voiceManager.cancelListening()
+        _volume.value = 0
+        _recognizedText.value = ""
         _recognitionState.value = RecognitionState.IDLE
     }
 

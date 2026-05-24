@@ -46,4 +46,10 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
 
     implementation(libs.androidx.activity)
+
+    // 导入libs目录下的所有jar和aar
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar", "*.aar"))))
+
+    // OkHttp（TTS SDK依赖）
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
 }
