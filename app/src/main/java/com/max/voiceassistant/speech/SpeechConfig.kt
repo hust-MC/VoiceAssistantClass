@@ -1,7 +1,6 @@
 package com.max.voiceassistant.speech
 
 object SpeechConfig {
-    var mockMode = false
 
     // 大家自行填充
     const val APP_ID = "121762125"

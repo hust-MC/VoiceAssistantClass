@@ -164,6 +164,11 @@ class MainViewModel(private val context: Context) : ViewModel() {
         dialogRepository.addAssistantMessage("对话已清空，请问有什么可以帮您")
     }
 
+    fun isMockMode(): Boolean {
+        return voiceManager.isMockMode()
+
+    }
+
     @Suppress("UNCHECKED_CAST")
     class Factory(
         private val context: Context

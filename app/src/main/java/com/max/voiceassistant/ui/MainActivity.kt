@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import com.max.voiceassistant.R
+import com.max.voiceassistant.data.AppSettings
 import com.max.voiceassistant.databinding.ActivityMainBinding
 import com.max.voiceassistant.model.ACState
 import com.max.voiceassistant.model.DoorState
@@ -28,6 +29,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var dialogAdapter: DialogAdapter
+    private val appSettings by lazy { AppSettings(applicationContext) }
 
     private val viewModel: MainViewModel by viewModels {
         MainViewModel.Factory(applicationContext)
@@ -194,8 +196,66 @@ class MainActivity : AppCompatActivity() {
 
         binding.chipTime.setOnClickListener {
             viewModel.processUserInput("")
-
         }
+        // 设置按钮
+        binding.btnSettings.setOnClickListener {
+            showSettingsDialog()
+        }
+    }
+
+    /**
+     * 显示设置对话框：语音模式、清空历史、关于。
+     */
+    private fun showSettingsDialog() {
+        val currentMode = if (appSettings.useMockMode) getString(R.string.settings_mode_mock) else getString(R.string.settings_mode_real)
+        val items = arrayOf(
+            getString(R.string.settings_voice_mode, currentMode),
+            getString(R.string.settings_clear_history),
+            getString(R.string.settings_about)
+        )
+
+        AlertDialog.Builder(this).setTitle(R.string.settings_title).setItems(items) { _, which ->
+            when (which) {
+                0 -> showModeSelectionDialog()
+                1 -> {
+                    viewModel.clearDialog()
+                    Toast.makeText(this, getString(R.string.settings_history_cleared), Toast.LENGTH_SHORT).show()
+                }
+                2 -> showAboutDialog()
+            }
+        }.show()
+    }
+
+    /**
+     * 显示语音模式选择（模拟 / 真实），切换后需重启生效。
+     */
+    private fun showModeSelectionDialog() {
+        val modes = arrayOf(getString(R.string.settings_mode_mock_label), getString(R.string.settings_mode_real_label))
+        val currentIndex = if (appSettings.useMockMode) 0 else 1
+
+        AlertDialog.Builder(this)
+            .setTitle(R.string.settings_select_mode_title)
+            .setSingleChoiceItems(modes, currentIndex) { dialog, which ->
+                val newMockMode = (which == 0)
+                if (newMockMode != appSettings.useMockMode) {
+                    appSettings.useMockMode = newMockMode
+                    val modeName = if (newMockMode) getString(R.string.settings_mode_mock) else getString(R.string.settings_mode_real)
+                    Toast.makeText(this, getString(R.string.settings_switched_mode, modeName), Toast.LENGTH_LONG).show()
+                }
+                dialog.dismiss()
+            }
+            .setNegativeButton(R.string.common_cancel, null)
+            .show()
+    }
+
+    /**
+     * 显示关于：应用名、当前模式、功能列表与提示。
+     */
+    private fun showAboutDialog() {
+        val modeText = if (viewModel.isMockMode()) "模拟模式" else "真实模式"
+        AlertDialog.Builder(this).setTitle("关于").setMessage(
+            getString(R.string.about_message, modeText)
+        ).setPositiveButton(R.string.common_ok, null).show()
     }
 
     private fun checkPermissionAndStart() {

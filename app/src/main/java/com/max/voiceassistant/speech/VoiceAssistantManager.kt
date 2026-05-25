@@ -2,6 +2,7 @@ package com.max.voiceassistant.speech
 
 import android.content.Context
 import android.util.Log
+import com.max.voiceassistant.data.AppSettings
 
 class VoiceAssistantManager(private val context: Context) {
 
@@ -10,6 +11,7 @@ class VoiceAssistantManager(private val context: Context) {
     private var isInitialized = false
     private var speechRecognizer: SpeechRecognizerManager? = null
     private var ttsManager: TTSManager? = null
+    private val useMockMode: Boolean get() = AppSettings(context).useMockMode
 
     fun setRecognitionCallback(callback: RecognitionCallback) {
         recognitionCallback = callback
@@ -157,11 +159,15 @@ class VoiceAssistantManager(private val context: Context) {
             Log.w(TAG, "VoiceManager已经初始化完成")
             return true
         }
-        return if (SpeechConfig.mockMode) {
+        return if (useMockMode) {
             initMockMode()
         } else {
             initRealMode()
         }
+    }
+
+    fun isMockMode(): Boolean {
+        return mockManager != null
     }
 
     interface RecognitionCallback {
