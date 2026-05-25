@@ -1,19 +1,20 @@
 package com.max.voiceassistant.ui
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.max.voiceassistant.DialogAdapter
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import com.max.voiceassistant.R
 import com.max.voiceassistant.databinding.ActivityMainBinding
 import com.max.voiceassistant.model.ACState
@@ -66,13 +67,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // 观察识别文本
-        lifecycleScope.launch {
-            viewModel.recognizedText.collectLatest { text ->
-                updateRecognizedTextUI(text)
-            }
-        }
-
         lifecycleScope.launch {
             viewModel.vehicleState.collectLatest {
                 updateACUI(it.ac)
@@ -87,9 +81,24 @@ class MainActivity : AppCompatActivity() {
         }
 
         lifecycleScope.launch {
+            viewModel.recognizedText.collectLatest {
+                updateRecognizedTextUI(it)
+            }
+        }
+
+        lifecycleScope.launch {
             viewModel.volume.collectLatest {
                 updateVolumeUI(it)
             }
+        }
+    }
+
+    private fun updateRecognizedTextUI(text: String) {
+        if (text.isNotEmpty()) {
+            binding.tvRecognizedText.visibility = View.VISIBLE
+            binding.tvRecognizedText.text = text
+        } else {
+            binding.tvRecognizedText.visibility = View.GONE
         }
     }
 
@@ -122,21 +131,6 @@ class MainActivity : AppCompatActivity() {
 
         Log.w("MainViewModel", "打开空调")
     }
-
-    /**
-     * 显示或隐藏识别到的文字。
-     *
-     * @param text 识别结果，空则隐藏
-     */
-    private fun updateRecognizedTextUI(text: String) {
-        if (text.isNotEmpty()) {
-            binding.tvRecognizedText.visibility = View.VISIBLE
-            binding.tvRecognizedText.text = text
-        } else {
-            binding.tvRecognizedText.visibility = View.GONE
-        }
-    }
-
 
     private fun updateDoorUI(doorState: DoorState) {
         binding.tvDoorStatus.text = if (doorState.isLocked) {
@@ -184,7 +178,7 @@ class MainActivity : AppCompatActivity() {
             when (currentState) {
                 RecognitionState.IDLE -> checkPermissionAndStart()
                 RecognitionState.LISTENING -> viewModel.stopListening()
-                RecognitionState.RECOGNIZING, RecognitionState.PROCESS -> { }
+                RecognitionState.RECOGNIZING, RecognitionState.PROCESS -> {}
                 RecognitionState.ERROR -> checkPermissionAndStart()
             }
         }
@@ -203,22 +197,24 @@ class MainActivity : AppCompatActivity() {
 
         }
     }
-    /**
-     * 检查录音权限：已有则直接开始；需说明则弹窗后请求；否则直接请求。
-     */
+
     private fun checkPermissionAndStart() {
         when {
-            ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED -> {
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED -> {
                 startVoiceRecognition()
             }
+
             shouldShowRequestPermissionRationale(Manifest.permission.RECORD_AUDIO) -> {
-                AlertDialog.Builder(this).setTitle(R.string.permission_record_title)
-                    .setMessage(R.string.permission_record_message)
-                    .setPositiveButton(R.string.permission_grant) { _, _ ->
+                AlertDialog.Builder(this).setTitle("录音权限")
+                    .setMessage("获取录音权限")
+                    .setPositiveButton("授权") { _, _ ->
                         requestPermissionLauncher.launch(
                             arrayOf(Manifest.permission.RECORD_AUDIO)
                         )
-                    }.setNegativeButton(R.string.common_cancel, null).show()
+                    }
             }
 
             else -> {
@@ -229,23 +225,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** 录音权限请求 Launcher */
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val allGranted = permissions.entries.all { it.value }
         if (allGranted) {
-            // 权限已授予，开始录音
+            // 权限均授予，开始录音
             startVoiceRecognition()
         } else {
-            // 权限被拒绝
-            Toast.makeText(this, getString(R.string.permission_need_record), Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "权限获取失败，录音功能无法使用，请授权", Toast.LENGTH_LONG).show()
         }
     }
 
-    /**
-     * 调用 ViewModel 开始语音识别。
-     */
     private fun startVoiceRecognition() {
         viewModel.startListening()
     }

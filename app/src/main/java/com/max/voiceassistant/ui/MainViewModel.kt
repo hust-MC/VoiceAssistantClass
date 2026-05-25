@@ -28,13 +28,15 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     val vehicleState: StateFlow<VehicleState> = vehicleRepository.vehicleState
     val dialogMessages: StateFlow<List<DialogMessage>> = dialogRepository.message
-    private val _recognizedText = MutableStateFlow("")
-    val recognizedText: StateFlow<String> = _recognizedText.asStateFlow()
+
     private val _volume = MutableStateFlow(0)
     val volume: StateFlow<Int> = _volume.asStateFlow()
 
     private val _lastResult = MutableStateFlow<CommandResult?>(null)
     val lastResult: StateFlow<CommandResult?> = _lastResult.asStateFlow()
+
+    private val _recognizedText = MutableStateFlow("")
+    val recognizedText: StateFlow<String> = _recognizedText.asStateFlow()
 
     private val intentParser = IntentParser()
     private val commandExecutor = CommandExecutor(context, vehicleRepository)
@@ -119,6 +121,7 @@ class MainViewModel(private val context: Context) : ViewModel() {
             // 6. 更新最近结果（用于UI反馈动画)
             _lastResult.value = result
         }
+
     }
 
     private fun handleTestCommand(text: String): CommandResult {
@@ -143,8 +146,6 @@ class MainViewModel(private val context: Context) : ViewModel() {
     fun startListening() {
         _recognitionState.value = RecognitionState.LISTENING
         voiceManager.startListening()
-
-        _recognizedText.value = ""
     }
 
     fun stopListening() {
@@ -153,8 +154,6 @@ class MainViewModel(private val context: Context) : ViewModel() {
 
     fun cancelListening() {
         voiceManager.cancelListening()
-        _volume.value = 0
-        _recognizedText.value = ""
         _recognitionState.value = RecognitionState.IDLE
     }
 

@@ -5,91 +5,61 @@ import android.util.Log
 import com.baidu.speech.EventListener
 import com.baidu.speech.EventManager
 import com.baidu.speech.EventManagerFactory
-import com.max.voiceassistant.R
 import com.baidu.speech.asr.SpeechConstant
 import org.json.JSONObject
 
-/**
- * 百度语音识别管理器。
- *
- * 封装百度 ASR SDK（baidu_speech_ASR_V3），提供 init/start/stop/cancel 与 [RecognitionListener] 回调。
- */
 class SpeechRecognizerManager(private val context: Context) {
-
-    companion object {
-        private const val TAG = "SpeechRecognizer"
-    }
 
     private var asr: EventManager? = null
     private var isInitialized = false
-    private var isListening = false
     private var listener: RecognitionListener? = null
+    private var isListening = false
 
-    /**
-     * 识别生命周期与结果回调。
-     */
-    interface RecognitionListener {
-        fun onReady()
-        fun onBegin()
-        fun onVolumeChanged(volume: Int)
-        fun onPartialResult(partialResult: String)
-        fun onResult(result: String)
-        fun onEnd()
-        fun onError(errorCode: Int, errorMessage: String)
-    }
 
-    /**
-     * 百度SDK事件监听器
-     */
     private val eventListener = EventListener { name, params, data, offset, length ->
         Log.d(TAG, "Event: $name, params: $params")
-
         when (name) {
             SpeechConstant.CALLBACK_EVENT_ASR_READY -> {
-                // 引擎准备就绪
                 listener?.onReady()
             }
 
             SpeechConstant.CALLBACK_EVENT_ASR_BEGIN -> {
-                // 开始录音
                 isListening = true
                 listener?.onBegin()
             }
 
             SpeechConstant.CALLBACK_EVENT_ASR_VOLUME -> {
-                // 音量变化
                 try {
                     val json = JSONObject(params)
                     val volumePercent = json.optInt("volume-percent", 0)
                     listener?.onVolumeChanged(volumePercent)
                 } catch (e: Exception) {
-                    Log.e(TAG, "Parse volume error", e)
+                    Log.e(TAG, "Parse Volume error", e)
                 }
             }
 
             SpeechConstant.CALLBACK_EVENT_ASR_PARTIAL -> {
-                // 识别结果回调（包含临时结果和最终结果）
                 try {
-                    if (params.isNullOrEmpty()) return@EventListener
-
+                    if (params.isNullOrEmpty()) {
+                        return@EventListener
+                    }
                     when {
                         params.contains("\"partial_result\"") -> {
-                            // 临时识别结果
                             val json = JSONObject(params)
-                            val resultsArray = json.optJSONArray("results_recognition")
-                            if (resultsArray != null && resultsArray.length() > 0) {
-                                val partialResult = resultsArray.optString(0, "")
+                            val resultArray = json.optJSONArray("results_recognition")
+                            if (resultArray != null && resultArray.length() > 0) {
+                                val partialResult = resultArray.optString(0, "")
                                 if (partialResult.isNotEmpty()) {
                                     listener?.onPartialResult(partialResult)
                                 }
                             }
                         }
+
                         params.contains("\"final_result\"") -> {
-                            // 最终识别结果
                             val json = JSONObject(params)
-                            val resultsArray = json.optJSONArray("results_recognition")
-                            if (resultsArray != null && resultsArray.length() > 0) {
-                                val result = resultsArray.optString(0, "")
+                            val resultArray = json.optJSONArray("results_recognition")
+                            if (resultArray != null && resultArray.length() > 0) {
+                                val result = resultArray.optString(0, "")
                                 if (result.isNotEmpty()) {
                                     listener?.onResult(result)
                                 }
@@ -97,80 +67,60 @@ class SpeechRecognizerManager(private val context: Context) {
                         }
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Parse result error", e)
+                    Log.e(TAG, "解析失败", e)
                 }
             }
 
             SpeechConstant.CALLBACK_EVENT_ASR_FINISH -> {
-                // 识别结束
                 isListening = false
                 listener?.onEnd()
             }
 
             SpeechConstant.CALLBACK_EVENT_ASR_END -> {
-                // 录音结束
-                isListening = false
-            }
-
-            SpeechConstant.CALLBACK_EVENT_ASR_EXIT -> {
-                // 识别引擎退出
                 isListening = false
             }
 
             SpeechConstant.CALLBACK_EVENT_ASR_ERROR -> {
-                // 识别错误
                 isListening = false
                 try {
                     val json = JSONObject(params)
                     val errorCode = json.optInt("error", -1)
-                    val errorMessage = json.optString("desc", context.getString(R.string.error_unknown))
-                    listener?.onError(errorCode, errorMessage)
+                    val errorMsg = json.optString("desc", "未知错误")
+                    listener?.onError(errorCode, errorMsg)
                 } catch (e: Exception) {
-                    listener?.onError(-1, context.getString(R.string.speech_parse_error))
+                    Log.e(TAG, "初始化失败", e)
                 }
             }
         }
+
     }
 
-    /**
-     * 初始化语音识别
-     */
     fun init() {
         if (isInitialized) {
-            Log.w(TAG, "Already initialized")
+            Log.w(TAG, "当前已经初始化完成")
             return
         }
-
         try {
-            // 创建事件管理器
             asr = EventManagerFactory.create(context, "asr")
             asr?.registerListener(eventListener)
             isInitialized = true
-            Log.d(TAG, "Speech recognizer initialized")
+            Log.d(TAG, "ASR初始化完成")
         } catch (e: Exception) {
-            Log.e(TAG, "Init failed", e)
+            Log.e(TAG, "初始化失败", e)
         }
     }
 
-    /**
-     * 设置识别监听器
-     */
-    fun setListener(listener: RecognitionListener) {
-        this.listener = listener
+    fun setListener(recognitionListener: RecognitionListener) {
+        listener = recognitionListener
     }
 
-    /**
-     * 开始语音识别
-     */
     fun startListening() {
         if (!isInitialized) {
-            Log.e(TAG, "Not initialized, call init() first")
-            listener?.onError(-1, context.getString(R.string.speech_asr_not_initialized))
+            listener?.onError(-1, "请先调用init()完成初始化")
             return
         }
 
         if (isListening) {
-            Log.w(TAG, "Already listening")
             return
         }
 
@@ -180,50 +130,35 @@ class SpeechRecognizerManager(private val context: Context) {
         // 发送开始识别事件
         val json = JSONObject(params).toString()
         asr?.send(SpeechConstant.ASR_START, json, null, 0, 0)
-        Log.d(TAG, "Start listening with params: $json")
+        Log.d(TAG, "开始识别: $json")
     }
 
-    /**
-     * 停止语音识别
-     */
     fun stopListening() {
         if (!isListening) {
             return
         }
-
-        asr?.send(SpeechConstant.ASR_STOP, null, null, 0, 0)
-        Log.d(TAG, "Stop listening")
-    }
-
-    /**
-     * 取消语音识别
-     */
-    fun cancel() {
-        asr?.send(SpeechConstant.ASR_CANCEL, "{}", null, 0, 0)
         isListening = false
-        Log.d(TAG, "Cancel listening")
+        asr?.send(SpeechConstant.ASR_STOP, null, null, 0, 0)
+        Log.d(TAG, "结束监听")
+
     }
 
-    /**
-     * 释放资源
-     */
+    fun cancel() {
+        asr?.send(SpeechConstant.ASR_CANCEL, "{}", null ,0,0)
+        isListening = false
+        Log.d(TAG, "取消监听")
+    }
+
     fun release() {
         cancel()
         asr?.unregisterListener(eventListener)
         asr = null
-        isInitialized = false
         isListening = false
-        Log.d(TAG, "Released")
+        isInitialized = false
+        Log.d(TAG, "释放资源")
+
     }
 
-    /**
-     * 是否正在识别
-     */
-    fun isListening(): Boolean = isListening
-
-    /**
-     * 构建识别参数
-     */
     private fun buildRecognitionParams(): Map<String, Any> {
         val params = mutableMapOf<String, Any>()
 
@@ -232,28 +167,28 @@ class SpeechRecognizerManager(private val context: Context) {
         params[SpeechConstant.APP_KEY] = SpeechConfig.API_KEY
         params[SpeechConstant.SECRET] = SpeechConfig.SECRET_KEY
 
-        // PID：识别模型（必须设置！）
-        // 1537 = 普通话输入法模型（有标点）
-        // 15372 = 普通话输入法模型（无标点）
-        // 1737 = 英语
-        // 1637 = 粤语
+        // 识别参数
         params[SpeechConstant.PID] = SpeechConfig.ASR.LANGUAGE
-
-        // VAD 模式：使用手动模式（touch），不依赖本地 VAD 模型
-        // VAD_TOUCH = 手动停止模式，需要调用 stop() 结束识别
-        // VAD_DNN = 自动端点检测，需要本地模型文件
         params[SpeechConstant.VAD] = SpeechConstant.VAD_TOUCH
-
-        // 是否回调音量
         params[SpeechConstant.ACCEPT_AUDIO_VOLUME] = true
-
-        // 是否回调音频数据
-        params[SpeechConstant.ACCEPT_AUDIO_DATA] = false
-
-        // VAD静音检测超时（毫秒）
-        // 用户停止说话后多久结束识别
         params[SpeechConstant.VAD_ENDPOINT_TIMEOUT] = SpeechConfig.ASR.VAD_ENDPOINT_TIMEOUT
 
+        // 自行添加其它参数
+
         return params
+    }
+
+    interface RecognitionListener {
+        fun onReady()
+        fun onBegin()
+        fun onVolumeChanged(volume: Int)
+        fun onResult(result: String)
+        fun onEnd()
+        fun onError(errorCode: Int, errorMessage: String)
+        fun onPartialResult(partialResult: String)
+    }
+
+    companion object {
+        const val TAG = "SpeechRecognizerManager"
     }
 }

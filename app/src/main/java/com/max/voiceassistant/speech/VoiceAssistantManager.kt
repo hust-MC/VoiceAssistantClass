@@ -8,7 +8,7 @@ class VoiceAssistantManager(private val context: Context) {
     private var mockManager: MockSpeechManager? = null
     private var recognitionCallback: RecognitionCallback? = null
     private var isInitialized = false
-    private var speechRecognizer: SpeechRecognizerManager? = null
+    private var speechRecognizer:SpeechRecognizerManager? = null
 
     fun setRecognitionCallback(callback: RecognitionCallback) {
         recognitionCallback = callback
@@ -31,10 +31,6 @@ class VoiceAssistantManager(private val context: Context) {
                 recognitionCallback?.onVolumeChanged(volume)
             }
 
-            override fun onPartialResult(partialResult: String) {
-                recognitionCallback?.onPartialResult(partialResult)
-            }
-
             override fun onResult(result: String) {
                 recognitionCallback?.onResult(result)
             }
@@ -46,6 +42,10 @@ class VoiceAssistantManager(private val context: Context) {
             override fun onError(errorCode: Int, errorMessage: String) {
                 recognitionCallback?.onError(errorCode, errorMessage)
             }
+
+            override fun onPartialResult(partialResult: String) {
+                recognitionCallback?.onPartialResult(partialResult)
+            }
         })
 
         isInitialized = true
@@ -54,51 +54,45 @@ class VoiceAssistantManager(private val context: Context) {
     }
 
     private fun initRealMode(): Boolean {
-        // TODO: 初始化真实环境
-        Log.d(TAG, "Initializing in REAL mode (Baidu SDK)")
+        Log.d(TAG, "初始化Real模式")
 
-        try {
-            // 初始化语音识别
-            speechRecognizer = SpeechRecognizerManager(context).apply {
-                init()
-                setListener(object : SpeechRecognizerManager.RecognitionListener {
-                    override fun onReady() {
-                        recognitionCallback?.onReady()
-                    }
+        speechRecognizer = SpeechRecognizerManager(context).apply {
+            init()
+            setListener(object : SpeechRecognizerManager.RecognitionListener {
+                override fun onReady() {
+                    recognitionCallback?.onReady()
+                }
 
-                    override fun onBegin() {
-                        recognitionCallback?.onBegin()
-                    }
+                override fun onBegin() {
+                    recognitionCallback?.onBegin()
+                }
 
-                    override fun onVolumeChanged(volume: Int) {
-                        recognitionCallback?.onVolumeChanged(volume)
-                    }
+                override fun onVolumeChanged(volume: Int) {
+                    recognitionCallback?.onVolumeChanged(volume)
+                }
 
-                    override fun onPartialResult(partialResult: String) {
-                        recognitionCallback?.onPartialResult(partialResult)
-                    }
+                override fun onResult(result: String) {
+                    recognitionCallback?.onResult(result)
+                }
 
-                    override fun onResult(result: String) {
-                        recognitionCallback?.onResult(result)
-                    }
+                override fun onEnd() {
+                    recognitionCallback?.onEnd()
+                }
 
-                    override fun onEnd() {
-                        recognitionCallback?.onEnd()
-                    }
+                override fun onError(errorCode: Int, errorMessage: String) {
+                    recognitionCallback?.onError(errorCode, errorMessage)
+                }
 
-                    override fun onError(errorCode: Int, errorMessage: String) {
-                        recognitionCallback?.onError(errorCode, errorMessage)
-                    }
-                })
-            }
+                override fun onPartialResult(partialResult: String) {
+                    recognitionCallback?.onPartialResult(partialResult)
+                }
 
-            isInitialized = true
-            Log.d(TAG, "Real mode initialized")
-            return true
-        } catch (e: Exception) {
-            Log.e(TAG, "Real mode init failed, fallback to mock mode", e)
-            return initMockMode()
+            })
         }
+
+        isInitialized = true
+        Log.d(TAG, "Real模式初始化完成")
+        return true
     }
 
     fun startListening() {
@@ -111,7 +105,6 @@ class VoiceAssistantManager(private val context: Context) {
         if (mockManager != null) {
             mockManager?.startListening()
         } else {
-            // TODO: 通过真实SDK开启监听
             speechRecognizer?.startListening()
         }
     }
@@ -120,7 +113,6 @@ class VoiceAssistantManager(private val context: Context) {
         if (mockManager != null) {
             mockManager?.stopListening()
         } else {
-            // TODO: 通过真实SDK结束监听
             speechRecognizer?.stopListening()
         }
     }
@@ -129,7 +121,6 @@ class VoiceAssistantManager(private val context: Context) {
         if (mockManager != null) {
             mockManager?.cancelListening()
         } else {
-            // TODO: 真实SDK
             speechRecognizer?.cancel()
         }
     }
