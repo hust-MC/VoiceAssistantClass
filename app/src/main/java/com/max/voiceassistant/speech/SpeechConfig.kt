@@ -12,4 +12,11 @@ object SpeechConfig {
         const val LANGUAGE = 1537
         const val VAD_ENDPOINT_TIMEOUT = 2000
     }
+
+    object TTS {
+        const val SPEAKER = 0
+        const val SPEED = 5
+        const val PITCH = 5
+        const val VOLUME = 5
+    }
 }

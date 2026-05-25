@@ -120,6 +120,8 @@ class MainViewModel(private val context: Context) : ViewModel() {
             dialogRepository.addAssistantMessage(responseText)
             // 6. 更新最近结果（用于UI反馈动画)
             _lastResult.value = result
+            // 7. 朗读处理结果
+            voiceManager.speak(responseText)
         }
 
     }

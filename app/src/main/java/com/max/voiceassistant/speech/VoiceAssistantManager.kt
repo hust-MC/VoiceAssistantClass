@@ -8,7 +8,8 @@ class VoiceAssistantManager(private val context: Context) {
     private var mockManager: MockSpeechManager? = null
     private var recognitionCallback: RecognitionCallback? = null
     private var isInitialized = false
-    private var speechRecognizer:SpeechRecognizerManager? = null
+    private var speechRecognizer: SpeechRecognizerManager? = null
+    private var ttsManager: TTSManager? = null
 
     fun setRecognitionCallback(callback: RecognitionCallback) {
         recognitionCallback = callback
@@ -88,6 +89,12 @@ class VoiceAssistantManager(private val context: Context) {
                 }
 
             })
+
+        }
+
+        ttsManager = TTSManager(context)
+        if (!ttsManager!!.init()) {
+            Log.e(TAG, "TTS初始化失败")
         }
 
         isInitialized = true
@@ -122,6 +129,26 @@ class VoiceAssistantManager(private val context: Context) {
             mockManager?.cancelListening()
         } else {
             speechRecognizer?.cancel()
+        }
+    }
+
+    fun speak(text: String) {
+        if (!isInitialized) {
+            Log.e(TAG, "未初始化完成")
+            return
+        }
+
+        if (text.isBlank()) {
+            Log.w(TAG, "Text为空")
+            return
+        }
+
+        Log.d(TAG, "Speak： $text")
+
+        if (mockManager != null) {
+            //mockTTSManager?.speak(text)
+        } else {
+            ttsManager?.speak(text)
         }
     }
 
